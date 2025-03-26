@@ -14,28 +14,42 @@ datasource db {
 }
 
 model User {
-  id                 Int     @id @default(autoincrement())
+  id                 Int           @id @default(autoincrement())
   refreshToken       String?
   name               String
-  email              String  @unique
+  email              String        @unique
   password           String?
   roleId             Int
   gender             String?
-  verificationStatus Boolean @default(false)
+  verificationStatus Boolean       @default(false)
   profilePic         String?
   // academicInfo       AcademicInfo?
   // feedback FeedBack?
+  Participant        Participant[]
 }
 
 model Event {
-  id          Int      @id @default(autoincrement())
+  id          Int           @id @default(autoincrement())
   eventName   String
   eventPoster String
   dateTime    DateTime
   venue       String
   about       String
-  isOnline    Boolean  @default(false)
+  isOnline    Boolean       @default(false)
   prize       String?
   entryFee    Decimal?
-  team        Boolean  @default(false)
+  team        Boolean       @default(false)
+  Participant Participant[]
+}
+
+model Participant {
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  eventId          Int
+  registrationDate DateTime
+  teamCode         String?
+  hasAttended      Boolean  @default(false)
+  qrCodeToken      String   @unique
+  event            Event    @relation(fields: [eventId], references: [id])
+  user             User     @relation(fields: [userId], references: [id])
 }
