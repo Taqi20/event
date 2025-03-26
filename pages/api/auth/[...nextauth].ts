@@ -19,11 +19,14 @@ export default NextAuth({
         async jwt({ token, account, user }) {
             if (account) {
                 token.accessToken = account.access_token;
+                token.user = user;
             }
             return token;
         },
         async session({ session, token }) {
             session.accessToken = token.accessToken as string;
+
+            session.user = token.user as any;
 
             return session;
         },

@@ -26,3 +26,16 @@ model User {
   // academicInfo       AcademicInfo?
   // feedback FeedBack?
 }
+
+model Event {
+  id          Int      @id @default(autoincrement())
+  eventName   String
+  eventPoster String
+  dateTime    DateTime
+  venue       String
+  about       String
+  isOnline    Boolean  @default(false)
+  prize       String?
+  entryFee    Decimal?
+  team        Boolean  @default(false)
+}
