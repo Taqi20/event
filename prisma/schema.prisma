@@ -28,6 +28,7 @@ model User {
   Participant        Participant[]
   accounts           Account[]
   sessions           Session[]
+  FeedBack           FeedBack?
 }
 
 model Event {
@@ -90,4 +91,13 @@ model VerificationToken {
   expires    DateTime
 
   @@id([identifier, token])
+}
+
+model FeedBack {
+  id      Int     @id @default(autoincrement())
+  userId  Int     @unique
+  status  Boolean @default(false)
+  rating  Int
+  comment String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
