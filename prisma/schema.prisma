@@ -43,6 +43,8 @@ model Event {
   entryFee    Decimal?
   team        Boolean       @default(false)
   Participant Participant[]
+  committeeId Int           @default(1)
+  committee   Committee?    @relation(fields: [committeeId], references: [id], onDelete: Cascade)
 }
 
 model Participant {
@@ -100,4 +102,31 @@ model FeedBack {
   rating  Int
   comment String
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Committee {
+  id            Int                     @id @default(autoincrement())
+  committeeName String
+  description   String
+  committeeLogo String?
+  nickName      String                  @unique
+  socialHandles CommitteeSocialHandle[]
+  pubs          Publicity[]
+  events        Event[]
+}
+
+model CommitteeSocialHandle {
+  id          Int       @id @default(autoincrement())
+  committeeId Int
+  platform    String
+  handle      String
+  committee   Committee @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+}
+
+model Publicity {
+  id          Int       @id @default(autoincrement())
+  committeeId Int
+  name        String
+  contact     String
+  committee   Committee @relation(fields: [committeeId], references: [id], onDelete: Cascade)
 }
