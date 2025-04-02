@@ -25,12 +25,16 @@ export default NextAuth({
                 token.accessToken = account.access_token;
                 token.user = user;
             }
+
+            console.log("🔹 JWT Token:", token);
             return token;
         },
-        async session({ session, token }) {
-            session.accessToken = token.accessToken as string;
 
-            session.user = token.user as any;
+        async session({ session, token }) {
+            session.accessToken = token.accessToken as string | undefined;
+            session.user = token.user && typeof (token.user as any).email === "string"
+                ? { email: (token.user as any).email }
+                : { email: "" };
 
             return session;
         },
