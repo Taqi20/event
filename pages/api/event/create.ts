@@ -30,7 +30,8 @@ export default async function handler(
         isOnline,
         prize,
         entryFee,
-        team
+        team,
+        committeeId
     } = req.body;
 
     //basic validation
@@ -49,7 +50,8 @@ export default async function handler(
                 isOnline,
                 prize,
                 entryFee,
-                team
+                team,
+                committeeId
             },
         });
         res.status(200).json({ message: "Event created successfully", event: newEvent });
