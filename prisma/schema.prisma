@@ -25,6 +25,7 @@ model User {
   gender             String?
   verificationStatus Boolean       @default(false)
   profilePic         String?
+  accessToken        String?
   Participant        Participant[]
   accounts           Account[]
   sessions           Session[]
