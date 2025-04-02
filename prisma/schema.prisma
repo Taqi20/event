@@ -17,8 +17,8 @@ model User {
   id                 Int           @id @default(autoincrement())
   name               String?
   email              String?       @unique
-  emailVerified      DateTime? // Field for storing the verification date
-  image              String? // Field for storing the profile image URL
+  emailVerified      DateTime?
+  image              String?
   refreshToken       String?
   password           String?
   roleId             Int           @default(1)
@@ -30,6 +30,7 @@ model User {
   accounts           Account[]
   sessions           Session[]
   FeedBack           FeedBack?
+  academicInfo       AcademicInfo?
 }
 
 model Event {
@@ -114,6 +115,16 @@ model Committee {
   socialHandles CommitteeSocialHandle[]
   pubs          Publicity[]
   events        Event[]
+}
+
+model AcademicInfo {
+  id         Int    @id @default(autoincrement())
+  userId     Int    @unique
+  department String
+  year       Int
+  division   String
+  rollNo     String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CommitteeSocialHandle {
