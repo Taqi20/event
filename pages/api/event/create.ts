@@ -35,8 +35,13 @@ export default async function handler(
     } = req.body;
 
     //basic validation
-    if (!eventName || !dateTime || !venue) {
+    if (!eventName || !dateTime || !venue || !committeeId) {
         return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const committeeIdNumber = Number(committeeId);
+    if (isNaN(committeeIdNumber)) {
+        return res.status(400).json({ message: "Invalid committee ID" });
     }
 
     try {
@@ -51,7 +56,7 @@ export default async function handler(
                 prize,
                 entryFee,
                 team,
-                committeeId
+                committeeId: committeeIdNumber
             },
         });
         res.status(200).json({ message: "Event created successfully", event: newEvent });
