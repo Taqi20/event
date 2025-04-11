@@ -1,30 +1,29 @@
 "use client";
 
-import { signIn, signOut, useSession } from "next-auth/react";
+import { FloatingNav } from "@/components/LandingPage/FloatingNavbar";
+import Footer from "@/components/LandingPage/Footer";
+import Features from "@/components/LandingPage/Features";
+import Service from "@/components/LandingPage/Service";
+import Testimonials from "@/components/LandingPage/Testimonials";
+import Hero from "@/components/LandingPage/Hero";
 
 export default function Home() {
-  const { data: session, status } = useSession();
-
-  if (status === "loading") return <p>Loading...</p>;
-
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>Welcome to EventsPRO</h1>
-      {!session && (
-        <>
-          <p>You are not signed in.</p>
-          <button onClick={() => signIn("google")}>
-            Sign in with Google
-          </button>
-        </>
-      )}
-      {session && (
-        <>
-          <p>Signed in as {session.user?.email}</p>
-          <p>Access Token: {session.accessToken}</p> {/* Display access token */}
-          <button onClick={() => signOut()}>Sign out</button>
-        </>
-      )}
-    </div>
+    <main className="min-h-screen overflow-x-hidden">
+      <FloatingNav
+        navItems={[
+          { name: "Home", link: "#home", icon: "/home.png" },
+          { name: "Works", link: "#service", icon: "/service.png" },
+          { name: "Testimonials", link: "#testimonials", icon: "/testimonial.png" },
+          { name: "About", link: "/about", icon: "/about.png" },
+          { name: "Contact", link: "/contact", icon: "/contact.png" },
+        ]}
+      />
+      <Hero />
+      <Service />
+      <Features />
+      <Testimonials />
+      <Footer />
+    </main>
   );
 }
