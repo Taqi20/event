@@ -15,14 +15,14 @@ export default async function handler(
         return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const { committeeNickName } = req.query;
-    if (!committeeNickName || typeof committeeNickName !== "string") {
-        return res.status(400).json({ message: "Committee nickname is required" });
+    const { committeeId } = req.query;
+    if (!committeeId) {
+        return res.status(400).json({ message: "Committee id is required" });
     }
 
     try {
-        const committee = await prisma.committee.findFirst({
-            where: { nickName: committeeNickName },
+        const committee = await prisma.committee.findUnique({
+            where: { id: Number(committeeId) },
             include: {
                 socialHandles: true,
                 events: true,
