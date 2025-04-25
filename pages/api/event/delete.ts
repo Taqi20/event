@@ -21,6 +21,10 @@ export default async function handler(
     }
 
     try {
+        await prisma.participant.deleteMany({
+            where: { eventId: Number(eventId) },
+        });
+
         const deletedEvent = await prisma.event.delete({
             where: { id: Number(eventId) },
         });

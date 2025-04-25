@@ -16,20 +16,20 @@ export default async function handler(
     }
 
     const currentDate = new Date();
-    const futureDate = new Date();
-    futureDate.setDate(currentDate.getDate() + 30);
 
     try {
         const upcomingEvents = await prisma.event.findMany({
             where: {
                 dateTime: {
                     gte: currentDate,
-                    lt: futureDate,
                 },
             },
             include: {
                 Participant: true, // include participant details
             },
+            orderBy: {
+                dateTime: "asc",
+            }
         });
 
         return res

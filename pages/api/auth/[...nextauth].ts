@@ -33,8 +33,11 @@ export default NextAuth({
         async session({ session, token }) {
             session.accessToken = token.accessToken as string | undefined;
             session.user = token.user && typeof (token.user as any).email === "string"
-                ? { email: (token.user as any).email }
-                : { email: "" };
+                ? {
+                    email: (token.user as any).email,
+                    id: (token.user as any).id || null,
+                }
+                : { email: "", id: null };
 
             return session;
         },

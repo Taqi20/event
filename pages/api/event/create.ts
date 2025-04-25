@@ -2,6 +2,21 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 // import { getSession } from 'next-auth/react';
 import { getToken } from 'next-auth/jwt';
 import { prisma } from "@/lib/prisma";
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+    cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: '10mb',
+        }
+    }
+}
 
 export default async function handler(
     req: NextApiRequest,
@@ -34,7 +49,6 @@ export default async function handler(
         committeeId
     } = req.body;
 
-    //basic validation
     if (!eventName || !dateTime || !venue || !committeeId) {
         return res.status(400).json({ message: "Missing required fields" });
     }
@@ -45,10 +59,15 @@ export default async function handler(
     }
 
     try {
+
+        const uploadResponse = await cloudinary.uploader.upload(eventPoster, {
+            upload_preset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET // Use the upload preset
+        });
+
         const newEvent = await prisma.event.create({
             data: {
                 eventName,
-                eventPoster,
+                eventPoster: uploadResponse.secure_url,
                 dateTime: new Date(dateTime),
                 venue,
                 about,
