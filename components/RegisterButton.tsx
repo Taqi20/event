@@ -1,38 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 
 interface RegisterButtonProps {
     eventId: number;
-    teamCode?: string;
-    onSuccess?: () => void;
+    onSuccess?: (newParticipant: any) => void;
 }
 
-export default function RegisterButton({ eventId, teamCode, onSuccess }: RegisterButtonProps) {
+const RegisterButton: React.FC<RegisterButtonProps> = ({
+    eventId,
+    onSuccess,
+}) => {
     const [loading, setLoading] = useState(false);
 
     const handleRegister = async () => {
         setLoading(true);
         try {
-            const response = await axios.post("/api/event/register", { eventId, teamCode: teamCode || null }, {
-                headers: { "Content-Type": "application/json" },
-            });
-            toast.success(response.data.message || "Registration successful 🎉");
-            onSuccess?.();
+            const response = await axios.post("/api/event/register", { eventId });
+            const newParticipant = response.data;
+
+            toast.success("Registered successfully!");
+            onSuccess?.(newParticipant);
         } catch (error: any) {
-            console.error("Registration error:", error);
-            toast.error(error?.response?.data?.message || "Registration failed");
+            console.error("Error registering for event:", error);
+            toast.error(error?.response?.data?.message || "Failed to register");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Button onClick={handleRegister} disabled={loading}>
-            {loading ? "Registering..." : "Register Now"}
+        <Button
+            onClick={handleRegister}
+            disabled={loading}
+            className="w-1/2 bg-green-600 hover:bg-green-700 transition-colors duration-300 text-white font-semibold focus:outline-none focus:ring-2 focus:ring-green-400 rounded-r-full"
+        >
+            {loading ? "Registering..." : "Register"}
         </Button>
     );
-}
+};
+
+export default RegisterButton;

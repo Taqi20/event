@@ -1,132 +1,217 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { Users, CheckCircle, Star } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { fetchCommittees, fetchUserRegisteredEvents, fetchUserProfile } from '@/lib/api';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import Link from 'next/link';
 
-type User = {
-    name: string;
-    email: string;
-};
-
-type DashboardData = {
-    totalEvents: number;
-    attendedEvents: number;
-    feedbackRating: number | null;
-};
-
-type Event = {
+interface Committee {
     id: number;
-    name: string;
-    date: string;
-};
+    committeeName: string;
+    description: string;
+    nickName: string;
+    events: any[];
+}
 
-export default function DashboardPage() {
-    const [user, setUser] = useState<User | null>(null);
-    const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-    const [events, setEvents] = useState<Event[]>([]);
+interface Event {
+    id: number;
+    eventName: string;
+    dateTime: string;
+    venue: string;
+}
+
+const Dashboard: React.FC = () => {
+    const [committees, setCommittees] = useState<Committee[]>([]);
+    const [registeredEvents, setRegisteredEvents] = useState<Event[]>([]);
+    const [user, setUser] = useState<{ name?: string; email?: string }>({});
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [totalMembers, setTotalMembers] = useState(0);
+    const [totalEvents, setTotalEvents] = useState(0);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const loadData = async () => {
+            setLoading(true);
             try {
-                const [profileRes, dashboardRes, eventsRes] = await Promise.all([
-                    fetch('/api/user/profile'),
-                    fetch('/api/user/dashboard'),
-                    fetch('/api/user/registered-events'),
-                ]);
+                // Fetch user profile
+                const userProfile = await fetchUserProfile();
+                setUser({ name: userProfile.user?.name, email: userProfile.user?.email });
 
-                const profileData = await profileRes.json();
-                const dashboardData = await dashboardRes.json();
-                const registeredEvents = await eventsRes.json();
+                // Fetch committees
+                const committeesData = await fetchCommittees();
+                setCommittees(committeesData.committees);
 
-                setUser(profileData.user);
-                setDashboard(dashboardData.dashboard);
-                setEvents(registeredEvents);
-            } catch (error) {
-                console.error('Error fetching dashboard data:', error);
+                // Calculate total members and events
+                let members = 0;
+                let events = 0;
+                committeesData.committees.forEach((committee: Committee) => {
+                    members += committee.events.length;
+                    events += committee.events.length;
+                });
+                setTotalMembers(members);
+                setTotalEvents(events);
+
+                // Fetch registered events
+                const registeredEventsData = await fetchUserRegisteredEvents();
+                setRegisteredEvents(registeredEventsData);
+
+            } catch (e: any) {
+                setError(e.message || "Failed to fetch data");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchData();
+        loadData();
     }, []);
 
+    if (loading) {
+        return <div className="flex justify-center items-center h-screen bg-gray-900 text-white">Loading dashboard data...</div>;
+    }
+
+    if (error) {
+        return <div className="flex justify-center items-center h-screen bg-gray-900 text-white">Error: {error}</div>;
+    }
+
     return (
-        <div className="p-6 text-white">
-            {loading ? (
-                <div className="space-y-2">
-                    <Skeleton className="h-6 w-1/3 bg-gray-700" />
-                    <Skeleton className="h-4 w-1/2 bg-gray-700" />
-                </div>
-            ) : (
-                <div className="mb-6">
-                    <h1 className="text-2xl font-bold">Welcome, {user?.name}</h1>
-                    <p className="text-sm text-gray-300">{user?.email}</p>
-                </div>
-            )}
+        <div className="bg-gray-900 text-white min-h-screen">
+            {/* Purple line at the top */}
+            <div className="h-1 bg-purple-600 w-full"></div>
 
-            {loading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <Skeleton className="h-28 bg-gray-800 rounded-xl" />
-                    <Skeleton className="h-28 bg-gray-800 rounded-xl" />
-                    <Skeleton className="h-28 bg-gray-800 rounded-xl" />
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                    <Card className="shadow-lg border border-gray-700 bg-white text-black">
-                        <CardContent className="p-6 space-y-2">
-                            <div className="flex items-center justify-between text-gray-600">
-                                <span className="font-semibold">Total Registrations</span>
-                                <Users className="w-5 h-5 text-blue-500" />
-                            </div>
-                            <div className="text-2xl font-bold">{dashboard?.totalEvents}</div>
-                        </CardContent>
-                    </Card>
+            <div className="container mx-auto py-8 px-4">
+                <h1 className="text-4xl font-bold mb-6">Dashboard</h1>
 
-                    <Card className="shadow-lg border border-gray-700 bg-white text-black">
-                        <CardContent className="p-6 space-y-2">
-                            <div className="flex items-center justify-between text-gray-600">
-                                <span className="font-semibold">Attended Events</span>
-                                <CheckCircle className="w-5 h-5 text-green-500" />
-                            </div>
-                            <div className="text-2xl font-bold text-green-600">{dashboard?.attendedEvents}</div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="shadow-lg border border-gray-700 bg-white text-black">
-                        <CardContent className="p-6 space-y-2">
-                            <div className="flex items-center justify-between text-gray-600">
-                                <span className="font-semibold">Feedback Rating</span>
-                                <Star className="w-5 h-5 text-yellow-500" />
-                            </div>
-                            <div className="text-2xl font-bold text-yellow-600">
-                                {dashboard?.feedbackRating ?? 'N/A'}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
-
-            <div>
-                <h2 className="text-xl font-bold mb-2">Your Upcoming Events</h2>
-                {loading ? (
-                    <Skeleton className="h-20 w-full bg-gray-800 rounded-xl" />
-                ) : events.length === 0 ? (
-                    <p className="text-gray-400">No upcoming events registered.</p>
-                ) : (
-                    <ul className="space-y-2">
-                        {events.map((event) => (
-                            <li key={event.id} className="bg-white text-black p-4 rounded-lg shadow">
-                                <h3 className="font-semibold">{event.name}</h3>
-                                <p className="text-sm text-gray-600">{event.date}</p>
-                            </li>
-                        ))}
-                    </ul>
+                {/* Welcome User */}
+                {user.name && (
+                    <h2 className="text-2xl mb-8">Welcome, {user.name}!</h2>
                 )}
+
+                {/* Stats Cards - 3 cards in a row */}
+                <div className="grid grid-cols-3 gap-4 mb-8">
+                    <Card className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white p-6 rounded-lg shadow-md">
+                        <div className="flex flex-col items-center justify-center h-full">
+                            <div className="mb-3">
+                                <span className="text-5xl font-extrabold text-white">
+                                    {registeredEvents.length}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-sm font-medium tracking-wide text-blue-100">
+                                    Events Registered
+                                </span>
+                            </div>
+                        </div>
+                    </Card>
+
+
+
+                    <Card className="bg-gradient-to-br from-green-600 via-green-700 to-green-800 text-white p-6 rounded-lg shadow-md">
+                        <div className="flex flex-col items-center justify-center h-full">
+                            <div className="mb-3">
+                                <span className="text-5xl font-extrabold text-white">
+                                    {committees.length}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-sm font-medium tracking-wide text-blue-100">
+                                    Committees Available
+                                </span>
+                            </div>
+                        </div>
+                    </Card>
+
+
+                    <Card className="bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 text-white p-6 rounded-lg shadow-md">
+                        <div className="flex flex-col items-center justify-center h-full">
+                            <div className="mb-3">
+                                <span className="text-5xl font-extrabold text-white">
+                                    {/* {committees.length} */}
+                                    0
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-sm font-medium tracking-wide text-blue-100">
+                                    Events Attended
+                                </span>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+
+                {/* Main Content - 2 columns layout */}
+                <div className="grid grid-cols-8 gap-6">
+                    {/* Registered Events (occupy 6/8 columns) */}
+                    <div className="col-span-6">
+                        <div className="text-white px-4 py-1 mb-4 inline-block">
+                            <span className="font-bold text-xl">Registered Events</span>
+                        </div>
+                        <div className="space-y-4 bg-purple-800 p-4 rounded-lg">
+                            {registeredEvents.map(event => (
+                                <Link href={`/dashboard/events/${event.id}`} key={event.id} className="block">
+                                    <Card className="p-4 rounded-lg bg-gray-800 hover:bg-gray-900 hover:text-white text-black shadow-md">
+                                        {/* Event Details */}
+                                        <div className="flex items-center justify-between">
+                                            <div className='flex flex-row items-center mx-2'>
+                                                <h3 className="font-bold text-lg">{event.eventName}</h3>
+                                                <p className="text-sm text-gray-400 mx-2">{event.venue}</p>
+                                            </div>
+                                            <div className="text-sm text-gray-400 mx-4">
+                                                {new Date(event.dateTime).toLocaleDateString()}
+                                            </div>
+                                        </div>
+                                    </Card>
+                                </Link>
+                            ))}
+                            {registeredEvents.length === 0 && (
+                                <Card className="bg-white text-black p-4 rounded-lg">
+                                    <p>No registered events found.</p>
+                                </Card>
+                            )}
+                        </div>
+                    </div>
+
+
+                    {/* Right Column (2 cols) */}
+                    <div className="col-span-2">
+                        {/* Action Buttons Side by Side */}
+                        <div className="mb-4 flex gap-2">
+                            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-center">
+                                <Link href="/dashboard/events" className="text-white my-2">
+                                    Events
+                                </Link>
+                            </Button>
+                            <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-center">
+                                <Link href="/dashboard/committees" className="text-white my-2">
+                                    Committees
+                                </Link>
+                            </Button>
+                        </div>
+
+                        {/* Communities section */}
+                        <div className="mb-4">
+                            <span className="text-white font-bold text-2xl">Manage Communities</span>
+                        </div>
+
+                        <div className="space-y-4">
+                            {committees.map(committee => (
+                                <Link href={`/dashboard/communities/${committee.nickName}`}>
+                                    <Card key={committee.id} className="bg-gray-800 hover:bg-gray-900 hover:text-white text-black p-4 rounded-lg my-2">
+                                        <p className="text-gray-700 mb-2">{committee.description}</p>
+                                    </Card>
+                                </Link>
+                            ))}
+                            {committees.length === 0 && (
+                                <Card className="bg-white text-black p-4 rounded-lg">
+                                    <p>No committees found.</p>
+                                </Card>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
-}
+};
+
+export default Dashboard;

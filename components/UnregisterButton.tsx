@@ -10,7 +10,10 @@ interface UnregisterButtonProps {
     onSuccess?: () => void;
 }
 
-export default function UnregisterButton({ eventId, onSuccess }: UnregisterButtonProps) {
+export default function UnregisterButton({
+    eventId,
+    onSuccess,
+}: UnregisterButtonProps) {
     const [loading, setLoading] = useState(false);
 
     const handleUnregister = async () => {
@@ -28,7 +31,11 @@ export default function UnregisterButton({ eventId, onSuccess }: UnregisterButto
     };
 
     return (
-        <Button onClick={handleUnregister} disabled={loading} variant="destructive">
+        <Button
+            onClick={handleUnregister}
+            disabled={loading}
+            className="w-1/2 bg-red-600 hover:bg-red-700 transition-colors duration-300 text-white font-semibold focus:outline-none focus:ring-2 focus:ring-red-400 rounded-r-full"
+        >
             {loading ? "Unregistering..." : "Unregister"}
         </Button>
     );
