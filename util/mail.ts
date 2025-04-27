@@ -9,7 +9,7 @@ export async function sendVerificationEmail(email: string, token: string) {
         },
     });
 
-    const verificationLink = `${process.env.NEXTAUTH_URL}/verify?token=${encodeURIComponent(token)}`;
+    const verificationLink = `${process.env.NEXTAUTH_URL}/dashboard/profile/verify?token=${encodeURIComponent(token)}`;
 
     const mailOptions = {
         from: process.env.SMTP_USER,
