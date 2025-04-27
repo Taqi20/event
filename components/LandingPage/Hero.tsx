@@ -5,11 +5,10 @@ import Link from "next/link";
 
 import { motion } from "framer-motion";
 import { BackgroundLines } from "../ui/BackGroundLines";
-import MagicButton from "../ui/MagicButton";
 
 const Hero = () => {
     return (
-        <div className="pt-32 md:pt-2 pb-20 px-4 sm:px-6 h-auto md:min-h-[70vh] flex flex-col justify-start md:justify-center items-center lg:px-8 max-w-7xl mx-auto relative z-10">
+        <div className="pt-32 md:pt-2 pb-20 px-4 sm:px-6 h-auto md:min-h-[70vh] flex flex-col justify-start md:justify-center items-center lg:px-8 max-w-7xl mx-auto relative z-10 mt-10">
             {/* Glowing Background Circle */}
 
 
@@ -86,7 +85,7 @@ const Hero = () => {
                         transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
                         className="mt-10 flex justify-center gap-2 md:gap-4 flex-wrap z-40"
                     >
-                        <Link href={"/dashboard"} className="cursor-pointer">
+                        <Link href={"/dashboard/events"} className="cursor-pointer">
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
@@ -95,7 +94,6 @@ const Hero = () => {
                                 Browse Events
                             </motion.button>
                         </Link>
-                        <MagicButton link={"/dashboard"}>Create Event</MagicButton>
                     </motion.div>
 
                 </BackgroundLines>

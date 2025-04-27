@@ -2,27 +2,10 @@
 
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import MagicButton from "./ui/MagicButton";
-import UserInfo from "./Others/UserInfo";
 import { useSession, signOut } from "next-auth/react";
 
 const Navbar = () => {
-    const [isScrolled, setIsScrolled] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const { data: session } = useSession();
-
-    useEffect(() => {
-        const handleScroll = () => {
-            if (window.scrollY > 50) {
-                setIsScrolled(true);
-            } else {
-                setIsScrolled(false);
-            }
-        };
-
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
 
     // Conditionally render auth button based on session status
     const authButton = session ? (
@@ -60,24 +43,9 @@ const Navbar = () => {
                         <div className="block md:hidden">{authButton}</div>
                         {/* Auth Button for desktop */}
                         <div className="hidden md:flex items-center space-x-4">{authButton}</div>
-                        {/* Avatar Section (only show when logged in) */}
-                        {session && (
-                            <div
-                                className="p-4 border-t border-gray-700 flex items-center gap-3 cursor-pointer"
-                                onClick={() => setIsModalOpen(true)}
-                            >
-                                <img
-                                    src={"/avatar.png"}
-                                    alt="User Avatar"
-                                    className="w-10 h-10 rounded-full border-2 border-gray-500"
-                                />
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
-            {/* Modal for user profile */}
-            {isModalOpen && <UserInfo setIsModalOpen={setIsModalOpen} />}
         </nav>
     );
 };

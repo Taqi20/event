@@ -2,7 +2,7 @@
 
 import React from "react";
 import { HoverEffect } from "../ui/CardHover";
-import { features } from "@/lib/constants";
+import { features } from "../../lib/constants";
 import { motion } from "framer-motion";
 
 const Features = () => {
