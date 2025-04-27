@@ -11,11 +11,15 @@ import {
     Info,
     Gift,
     DollarSign,
+    AlertTriangle,
     Hash,
 } from 'lucide-react';
+import Loader from '@/components/Loader';
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent } from "@/components/ui/Card";
 
 export default function CreateEventPage() {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const router = useRouter();
 
     const [formData, setFormData] = useState({
@@ -116,7 +120,29 @@ export default function CreateEventPage() {
         } finally {
             setLoading(false);
         }
-    };
+        if (loading) {
+            return <Loader text="Creating Event..." />;
+        }
+
+    }
+
+    if (status === "unauthenticated") {
+        return (
+            <div className="bg-gray-950 text-white min-h-screen p-8 flex items-center justify-center">
+                <Card className="bg-red-900/30 border border-red-700 max-w-md w-full">
+                    <CardContent className="flex flex-col items-center text-center text-red-300">
+                        <AlertTriangle className="w-12 h-12 mb-4 text-red-500" />
+                        <h2 className="text-xl font-semibold mb-2">You need to be signed in to view this page.</h2>
+                        <Button variant="outline" size="sm" onClick={() => {
+                            window.location.href = `${process.env.NEXT_PUBLIC_BASE_URL}/login`
+                        }} className="mt-6 border-red-500 text-red-300 hover:bg-red-700 hover:text-white">
+                            Login
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-tr from-gray-900 to-gray-800 py-12 px-4 sm:px-8 flex justify-center items-center overflow-hidden">

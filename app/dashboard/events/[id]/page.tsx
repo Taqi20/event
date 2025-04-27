@@ -11,8 +11,11 @@ import {
     TicketIcon,
     UsersIcon,
     ShareIcon,
+    AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent } from "@/components/ui/Card";
 
 import RegisterButton from "@/components/RegisterButton";
 import UnregisterButton from "@/components/UnregisterButton";
@@ -51,6 +54,8 @@ type EventType = {
 };
 
 export default function EventDetailsPage() {
+    const { status } = useSession();
+
     const { id } = useParams() as { id: string };
     const { data: session } = useSession();
     const [event, setEvent] = useState<EventType | null>(null);
@@ -94,7 +99,23 @@ export default function EventDetailsPage() {
             toast.success("Event URL copied to clipboard!");
         });
     };
-
+    if (status === "unauthenticated") {
+        return (
+            <div className="bg-gray-950 text-white min-h-screen p-8 flex items-center justify-center">
+                <Card className="bg-red-900/30 border border-red-700 max-w-md w-full">
+                    <CardContent className="flex flex-col items-center text-center text-red-300">
+                        <AlertTriangle className="w-12 h-12 mb-4 text-red-500" />
+                        <h2 className="text-xl font-semibold mb-2">You need to be signed in to view this page.</h2>
+                        <Button variant="outline" size="sm" onClick={() => {
+                            window.location.href = `${process.env.NEXT_PUBLIC_BASE_URL}/login`
+                        }} className="mt-6 border-red-500 text-red-300 hover:bg-red-700 hover:text-white">
+                            Login
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900 py-12">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

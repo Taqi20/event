@@ -1,17 +1,22 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { fetchCommittees, fetchUserRegisteredEvents, fetchUserProfile } from '@/lib/api';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import Link from 'next/link';
+import React, { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent } from "@/components/ui/Card";
+import { Avatar } from "@/components/ui/Avatar";
+import {
+    BarChart2, CheckCircle, Users, CalendarCheck, BookUser, Building, ArrowRight,
+    ListChecks, AlertTriangle, Calendar, MapPin, ExternalLink, Info
+} from "lucide-react";
+import Loader from "@/components/Loader";
+import { useSession } from "next-auth/react";
 
-interface Committee {
+interface UserProfile {
     id: number;
-    committeeName: string;
-    description: string;
-    nickName: string;
-    events: any[];
+    name?: string | null;
+    email?: string | null;
+    profilePic?: string | null;
 }
 
 interface Event {
@@ -19,192 +24,306 @@ interface Event {
     eventName: string;
     dateTime: string;
     venue: string;
+    about?: string | null;
+    eventPoster?: string | null;
+    isOnline?: boolean;
+    prize?: string | null;
+    entryFee?: number | null;
+    team?: boolean;
+    committeeId?: number | null;
 }
 
+interface Committee {
+    id: number;
+    committeeName: string;
+    nickName: string;
+    description?: string | null;
+    committeeLogo?: string | null;
+}
+
+interface DashboardStats {
+    totalEvents: number;
+    attendedEvents: number;
+    feedbackRating: number | null;
+}
+
+const getInitials = (name?: string | null): string => {
+    if (!name) return "?";
+    const names = name.split(" ");
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
+};
+
+import {
+    fetchUserProfile,
+    fetchUserDashboard,
+    fetchUserRegisteredEvents,
+    fetchUpcomingEvents,
+    fetchCommittees
+} from "@/lib/api";
+
 const Dashboard: React.FC = () => {
-    const [committees, setCommittees] = useState<Committee[]>([]);
+    const { data: session, status } = useSession();
+    const [user, setUser] = useState<UserProfile | null>(null);
+    const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
     const [registeredEvents, setRegisteredEvents] = useState<Event[]>([]);
-    const [user, setUser] = useState<{ name?: string; email?: string }>({});
-    const [loading, setLoading] = useState(true);
+    const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+    const [committees, setCommittees] = useState<Committee[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [totalMembers, setTotalMembers] = useState(0);
-    const [totalEvents, setTotalEvents] = useState(0);
 
     useEffect(() => {
-        const loadData = async () => {
+        const loadDashboardData = async () => {
             setLoading(true);
+            setError(null);
+
             try {
-                // Fetch user profile
-                const userProfile = await fetchUserProfile();
-                setUser({ name: userProfile.user?.name, email: userProfile.user?.email });
+                const results = await Promise.allSettled([
+                    fetchUserProfile(),
+                    fetchUserDashboard(),
+                    fetchUserRegisteredEvents(),
+                    fetchUpcomingEvents(),
+                    fetchCommittees()
+                ]);
 
-                // Fetch committees
-                const committeesData = await fetchCommittees();
-                setCommittees(committeesData.committees);
+                let fetchError = null;
 
-                // Calculate total members and events
-                let members = 0;
-                let events = 0;
-                committeesData.committees.forEach((committee: Committee) => {
-                    members += committee.events.length;
-                    events += committee.events.length;
-                });
-                setTotalMembers(members);
-                setTotalEvents(events);
+                if (results[0].status === "fulfilled" && results[0].value?.user) {
+                    setUser(results[0].value.user);
+                } else {
+                    fetchError = "Could not load user profile.";
+                }
 
-                // Fetch registered events
-                const registeredEventsData = await fetchUserRegisteredEvents();
-                setRegisteredEvents(registeredEventsData);
+                if (results[1].status === "fulfilled" && results[1].value?.dashboard) {
+                    setDashboardStats(results[1].value.dashboard);
+                } else if (!fetchError) {
+                    fetchError = "Could not load dashboard statistics.";
+                }
 
+                if (results[2].status === "fulfilled" && Array.isArray(results[2].value)) {
+                    setRegisteredEvents(results[2].value);
+                } else {
+                    setRegisteredEvents([]);
+                }
+
+                if (results[3].status === "fulfilled" && Array.isArray(results[3].value?.events)) {
+                    setUpcomingEvents(results[3].value.events);
+                } else {
+                    setUpcomingEvents([]);
+                }
+
+                if (results[4].status === "fulfilled" && Array.isArray(results[4].value?.committees)) {
+                    setCommittees(results[4].value.committees);
+                } else {
+                    setCommittees([]);
+                }
+
+                setError(fetchError);
             } catch (e: any) {
-                setError(e.message || "Failed to fetch data");
+                setError("An unexpected error occurred. Please try again later.");
+                setUser(null);
+                setDashboardStats(null);
+                setRegisteredEvents([]);
+                setUpcomingEvents([]);
+                setCommittees([]);
             } finally {
                 setLoading(false);
             }
         };
 
-        loadData();
-    }, []);
+        loadDashboardData();
+    }, [session]);
+
+    const sortedRegisteredEvents = useMemo(() => {
+        return [...registeredEvents].sort((a, b) => {
+            try {
+                return new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime();
+            } catch { return 0; }
+        });
+    }, [registeredEvents]);
 
     if (loading) {
-        return <div className="flex justify-center items-center h-screen bg-gray-900 text-white">Loading dashboard data...</div>;
+        return <Loader text="Loading Dashboard..." />;
     }
 
-    if (error) {
-        return <div className="flex justify-center items-center h-screen bg-gray-900 text-white">Error: {error}</div>;
+    if (status === "unauthenticated") {
+        return (
+            <div className="bg-gray-950 text-white min-h-screen p-8 flex items-center justify-center">
+                <Card className="bg-red-900/30 border border-red-700 max-w-md w-full">
+                    <CardContent className="flex flex-col items-center text-center text-red-300">
+                        <AlertTriangle className="w-12 h-12 mb-4 text-red-500" />
+                        <h2 className="text-xl font-semibold mb-2">You need to be signed in to view this page.</h2>
+                        <Button variant="outline" size="sm" onClick={() => { window.location.href = `${process.env.NEXT_PUBLIC_BASE_URL}/login` }} className="mt-6 border-red-500 text-red-300 hover:bg-red-700 hover:text-white">
+                            Login
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
 
     return (
-        <div className="bg-gray-900 text-white min-h-screen">
-            {/* Purple line at the top */}
-            <div className="h-1 bg-purple-600 w-full"></div>
+        <div className="bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800 min-h-screen text-white">
+            <div className="h-1 w-full bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600"></div>
+            <div className="container mx-auto py-8 px-4 md:px-6 lg:px-8">
+                <div className="flex items-center justify-between mb-8 md:mb-10">
+                    <div>
+                        {/* <h1 className="text-3xl md:text-4xl font-bold mb-1">Dashboard</h1> */}
+                        {user?.name && (
+                            <p className="text-2xl text-gray-400">Welcome back, {user.name}!</p>
+                        )}
+                    </div>
+                    {user && (
+                        <Link href={`${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/profile`} target="_blank">
+                            <Avatar
+                                src={user.profilePic}
+                                fallback={getInitials(user.name)}
+                                size="lg"
+                                className="border-2 border-purple-500 shadow-lg"
+                            />
+                        </Link>
+                    )}
+                </div>
 
-            <div className="container mx-auto py-8 px-4">
-                <h1 className="text-4xl font-bold mb-6">Dashboard</h1>
-
-                {/* Welcome User */}
-                {user.name && (
-                    <h2 className="text-2xl mb-8">Welcome, {user.name}!</h2>
+                {error && user && (
+                    <Card className="mb-6 bg-yellow-900/30 border border-yellow-700">
+                        <CardContent className="flex items-center gap-3 text-yellow-300 text-sm">
+                            <Info className="w-5 h-5 flex-shrink-0" />
+                            <p><span className='font-semibold'>Note:</span> {error} Some information might be unavailable.</p>
+                        </CardContent>
+                    </Card>
                 )}
 
-                {/* Stats Cards - 3 cards in a row */}
-                <div className="grid grid-cols-3 gap-4 mb-8">
-                    <Card className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white p-6 rounded-lg shadow-md">
-                        <div className="flex flex-col items-center justify-center h-full">
-                            <div className="mb-3">
-                                <span className="text-5xl font-extrabold text-white">
-                                    {registeredEvents.length}
-                                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-10">
+                    <Card className="bg-white/10 backdrop-blur-md border border-gray-700 hover:border-blue-600/70 transition-colors shadow-xl">
+                        <CardContent>
+                            <div className="flex items-center justify-between pb-2">
+                                <h3 className="text-sm font-medium text-gray-300">Registered Events</h3>
+                                <ListChecks className="w-5 h-5 text-blue-400" />
                             </div>
-                            <div>
-                                <span className="text-sm font-medium tracking-wide text-blue-100">
-                                    Events Registered
-                                </span>
+                            <div className="text-3xl font-bold text-white">
+                                {dashboardStats?.totalEvents ?? <span className="text-2xl text-gray-500">-</span>}
                             </div>
-                        </div>
+                            <p className="text-xs text-gray-400 pt-1">Total events you've signed up for.</p>
+                        </CardContent>
                     </Card>
 
+                    <Card className="bg-white/10 backdrop-blur-md border border-gray-700 hover:border-green-600/70 transition-colors shadow-xl">
+                        <CardContent>
+                            <div className="flex items-center justify-between pb-2">
+                                <h3 className="text-sm font-medium text-gray-300">Events Attended</h3>
+                                <CheckCircle className="w-5 h-5 text-green-400" />
+                            </div>
+                            <div className="text-3xl font-bold text-white">
+                                {dashboardStats?.attendedEvents ?? <span className="text-2xl text-gray-500">-</span>}
+                            </div>
+                            <p className="text-xs text-gray-400 pt-1">Events where attendance was marked.</p>
+                        </CardContent>
+                    </Card>
 
-
-                    <Card className="bg-gradient-to-br from-green-600 via-green-700 to-green-800 text-white p-6 rounded-lg shadow-md">
-                        <div className="flex flex-col items-center justify-center h-full">
-                            <div className="mb-3">
-                                <span className="text-5xl font-extrabold text-white">
+                    <Card className="bg-white/10 backdrop-blur-md border border-gray-700 hover:border-yellow-600/70 transition-colors shadow-xl">
+                        <CardContent>
+                            <Link href={`/dashboard/committees`} target="_blank">
+                                <div className="flex items-center justify-between pb-2">
+                                    <h3 className="text-sm font-medium text-gray-300">Committees</h3>
+                                    <Building className="w-5 h-5 text-indigo-400" />
+                                </div>
+                                <div className="text-3xl font-bold text-white">
                                     {committees.length}
-                                </span>
-                            </div>
-                            <div>
-                                <span className="text-sm font-medium tracking-wide text-blue-100">
-                                    Committees Available
-                                </span>
-                            </div>
-                        </div>
-                    </Card>
-
-
-                    <Card className="bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 text-white p-6 rounded-lg shadow-md">
-                        <div className="flex flex-col items-center justify-center h-full">
-                            <div className="mb-3">
-                                <span className="text-5xl font-extrabold text-white">
-                                    {/* {committees.length} */}
-                                    0
-                                </span>
-                            </div>
-                            <div>
-                                <span className="text-sm font-medium tracking-wide text-blue-100">
-                                    Events Attended
-                                </span>
-                            </div>
-                        </div>
+                                </div>
+                                <p className="text-xs text-gray-400 pt-1">Active committees to explore.</p>
+                            </Link>
+                        </CardContent>
                     </Card>
                 </div>
 
-                {/* Main Content - 2 columns layout */}
-                <div className="grid grid-cols-8 gap-6">
-                    {/* Registered Events (occupy 6/8 columns) */}
-                    <div className="col-span-6">
-                        <div className="text-white px-4 py-1 mb-4 inline-block">
-                            <span className="font-bold text-xl">Registered Events</span>
-                        </div>
-                        <div className="space-y-4 bg-purple-800 p-4 rounded-lg">
-                            {registeredEvents.map(event => (
-                                <Link href={`/dashboard/events/${event.id}`} key={event.id} className="block">
-                                    <Card className="p-4 rounded-lg bg-gray-800 hover:bg-gray-900 hover:text-white text-black shadow-md">
-                                        {/* Event Details */}
-                                        <div className="flex items-center justify-between">
-                                            <div className='flex flex-row items-center mx-2'>
-                                                <h3 className="font-bold text-lg">{event.eventName}</h3>
-                                                <p className="text-sm text-gray-400 mx-2">{event.venue}</p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-6">
+                        <h2 className="text-2xl font-semibold border-b border-gray-700 pb-2 text-gray-200">
+                            Your Registered Events
+                        </h2>
+                        {sortedRegisteredEvents.length > 0 ? (
+                            <div className="space-y-4">
+                                {sortedRegisteredEvents.map(event => (
+                                    <Card key={event.id} className="bg-white/5 border border-gray-800 hover:border-blue-500/60 transition-colors shadow-md">
+                                        <CardContent className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 py-4">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar className="w-4 h-4 text-purple-400" />
+                                                    <span className="font-semibold text-lg">{event.eventName}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-sm text-gray-400">
+                                                    <CalendarCheck className="w-4 h-4" />
+                                                    {new Date(event.dateTime).toLocaleString(undefined, {
+                                                        dateStyle: "medium",
+                                                        timeStyle: "short"
+                                                    })}
+                                                    <span className="mx-2">|</span>
+                                                    <MapPin className="w-4 h-4" />
+                                                    {event.venue}
+                                                </div>
                                             </div>
-                                            <div className="text-sm text-gray-400 mx-4">
-                                                {new Date(event.dateTime).toLocaleDateString()}
+                                            <div className="flex items-center gap-2">
+                                                <span className="bg-purple-700/60 text-purple-200 text-xs px-3 py-1 rounded-full font-medium">
+                                                    Registered
+                                                </span>
+                                                <Link href={`/dashboard/events/${event.id}`} target="_blank">
+                                                    <ExternalLink className="w-5 h-5 text-gray-400 hover:text-blue-400" />
+                                                </Link>
                                             </div>
-                                        </div>
+                                        </CardContent>
                                     </Card>
-                                </Link>
-                            ))}
-                            {registeredEvents.length === 0 && (
-                                <Card className="bg-white text-black p-4 rounded-lg">
-                                    <p>No registered events found.</p>
-                                </Card>
-                            )}
-                        </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <Card className="bg-white/5 border border-gray-800">
+                                <CardContent className="py-8 flex flex-col items-center text-gray-400">
+                                    <Info className="w-8 h-8 mb-2 text-blue-400" />
+                                    <p className="text-lg">No events registered yet.</p>
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
 
+                    <div className="space-y-8">
+                        <div>
+                            <div className="flex gap-0 shadow-lg rounded-full w-full mb-5">
+                                <button onClick={() => { window.location.href = `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/events` }} className="py-3 w-1/2 inline-flex items-center justify-center gap-2 px-6 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded-l-full">
+                                    Explore Events
+                                </button>
+                                <button onClick={() => {
+                                    window.location.href = `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/committees`
+                                }} className="w-1/2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 transition-colors duration-300 text-white font-semibold focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-r-full">
+                                    Explore Committees
+                                </button>
+                            </div>
 
-                    {/* Right Column (2 cols) */}
-                    <div className="col-span-2">
-                        {/* Action Buttons Side by Side */}
-                        <div className="mb-4 flex gap-2">
-                            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-center">
-                                <Link href="/dashboard/events" className="text-white my-2">
-                                    Events
-                                </Link>
-                            </Button>
-                            <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-center">
-                                <Link href="/dashboard/committees" className="text-white my-2">
-                                    Committees
-                                </Link>
-                            </Button>
-                        </div>
-
-                        {/* Communities section */}
-                        <div className="mb-4">
-                            <span className="text-white font-bold text-2xl">Manage Communities</span>
-                        </div>
-
-                        <div className="space-y-4">
-                            {committees.map(committee => (
-                                <Link href={`/dashboard/communities/${committee.nickName}`}>
-                                    <Card key={committee.id} className="bg-gray-800 hover:bg-gray-900 hover:text-white text-black p-4 rounded-lg my-2">
-                                        <p className="text-gray-700 mb-2">{committee.description}</p>
-                                    </Card>
-                                </Link>
-                            ))}
-                            {committees.length === 0 && (
-                                <Card className="bg-white text-black p-4 rounded-lg">
-                                    <p>No committees found.</p>
-                                </Card>
+                            <h3 className="text-lg font-semibold border-b border-gray-700 pb-1 text-gray-200 mb-3">
+                                Upcoming Events
+                            </h3>
+                            {upcomingEvents.length > 0 ? (
+                                <div className="space-y-3">
+                                    {upcomingEvents.slice(0, 5).map(event => (
+                                        <Card key={event.id} className="bg-white/5 border border-gray-800 hover:border-green-500/60 transition-colors">
+                                            <CardContent className="flex items-center justify-between gap-2 py-3">
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{event.eventName}</span>
+                                                    <span className="text-xs text-gray-400">
+                                                        {new Date(event.dateTime).toLocaleString(undefined, {
+                                                            dateStyle: "medium",
+                                                            timeStyle: "short"
+                                                        })}
+                                                    </span>
+                                                </div>
+                                                <Link href={`/dashboard/events/${event.id}`} target="_blank">
+                                                    <ExternalLink className="w-5 h-5 text-gray-400 hover:text-green-400" />
+                                                </Link>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 text-sm mt-2">No upcoming events.</p>
                             )}
                         </div>
                     </div>
