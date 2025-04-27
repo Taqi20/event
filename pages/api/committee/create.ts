@@ -1,6 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+    cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: '10mb',
+        }
+    }
+}
 
 export default async function handler(
     req: NextApiRequest,
@@ -22,11 +37,19 @@ export default async function handler(
             return res.status(400).json({ message: "Committee name and nickname are required" });
         }
 
+        let committeeLogoUrl = committeeLogo || null;
+        if (committeeLogo) {
+            const uploadResponse = await cloudinary.uploader.upload(committeeLogo, {
+                upload_preset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+            });
+            committeeLogoUrl = uploadResponse.secure_url;
+        }
+
         const newCommittee = await prisma.committee.create({
             data: {
                 committeeName,
                 description,
-                committeeLogo,
+                committeeLogo: committeeLogoUrl,
                 nickName,
                 socialHandles: {
                     create: socialHandles || [],
