@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/Button";
+import { Button } from "../components/ui/Button";
 
 interface RegisterButtonProps {
     eventId: number;
