@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
-import { Card, CardContent } from "@/components/ui/Card";
-import { Avatar } from "@/components/ui/Avatar";
+import { Button } from "../../components/ui/Button";
+import { Card, CardContent } from "../../components/ui/Card";
+import { Avatar } from "../../components/ui/Avatar";
 import {
     BarChart2, CheckCircle, Users, CalendarCheck, BookUser, Building, ArrowRight,
     ListChecks, AlertTriangle, Calendar, MapPin, ExternalLink, Info
 } from "lucide-react";
-import Loader from "@/components/Loader";
+import Loader from "../../components/Loader";
 import { useSession } from "next-auth/react";
 
 interface UserProfile {
@@ -60,7 +60,7 @@ import {
     fetchUserRegisteredEvents,
     fetchUpcomingEvents,
     fetchCommittees
-} from "@/lib/api";
+} from "../../lib/api";
 
 const Dashboard: React.FC = () => {
     const { data: session, status } = useSession();

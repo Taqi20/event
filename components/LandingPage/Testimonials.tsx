@@ -1,7 +1,7 @@
 "use client"
 import React from "react";
 
-import { testimonials } from "@/lib/constants";
+import { testimonials } from "../../lib/constants";
 import { motion } from "framer-motion"
 import { InfiniteMovingCards } from "../ui/InfiniteCard";
 
